@@ -57,7 +57,7 @@ class upsample_conv(nn.Module):
     # Upsample the x,m
     x = self.upsample(x)
     m = self.upsample(m)
-    y1,m1 = self.cconv(y1,m1)
+    y1,m1 = self.cconv(x,m)
 
     return y1,m1
   
@@ -108,6 +108,7 @@ class decoder_block(nn.Module):
 
 class PUnet(nn.Module):
   def __init__(self,in_channels,base_channels,out_channels):
+    super(PUnet,self).__init__()
     self.in_channels = in_channels
     self.base_channels = base_channels
     self.num_features = out_channels
@@ -136,7 +137,7 @@ class PUnet(nn.Module):
     x6,m6 = self.decoder2(x5,m5,x3,m3)
     x7,m7 = self.decoder3(x6,m6,x2,m2)
     x8,m8 = self.decoder4(x7,m7,x1,m1)
-    y,_ = self.output_layer(x8,m8)
+    y = self.output_layer(x8,m8)
 
     return y
 
