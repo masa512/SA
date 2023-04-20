@@ -15,9 +15,9 @@ def circ_sample(A,loc,rad):
 
 
   # Return the subsection
-  Mask = R <= rad
+  Mask = 1*(R <= rad)
 
-  return A*Mask
+  return A*Mask,Mask
 
 
 
@@ -27,11 +27,18 @@ def stitch_samples(A,L,rad):
   # Make sure L is odd
 
   samples = []
+  masks = []
   steps = np.linspace(-(L//2),L//2,L,True).astype(int)
   for i in steps:
     for j in steps:
-      sample = circ_sample(A,[i*rad*2,j*rad*2],rad)
+      sample,mask = circ_sample(A,[i*rad*2,j*rad*2],rad)
       samples.append(sample)
+      masks.append(mask)
+
   
   B = sum(samples)
-  return B
+  M = sum(masks)
+
+  M[M>0] = 1
+
+  return B,M
