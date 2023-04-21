@@ -86,29 +86,89 @@ class cell_dataset(Dataset):
 
     return len(self.folders)
   
-  def __getitem__(self,idx):
-    """
-    Returns I,M which are the fetched input and corresponding mask
+  import os
+import shutil
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+import pandas as pd
+import circ_sample
+from scipy.fft import ifftn,fftn,fftshift,ifftshift
+import numpy as np
+import torch
 
-    Keyword arguments:
-      idx -- index used for the folderlist
-    
-    Returns:
-      I_trans -- Input image transformed
-      M_trans -- Corresponding mask transformed
-    """
+# Transport the dataset to the local disk
+def transfer_data(in_path:str="", out_path:str="")->None:
+  """}
+  Transfer the data to the local - Also has loading bar for guestimate
 
-    folder_name = self.folders['0'].iloc[idx]
+  Keyword Argument:
+  in_path (str) -- Input director of the data folder
+  out_path (str) -- Output directory of the data folder
 
-    I = read_image(os.path.join(self.image_dir, folder_name))[0,:,:]
-    print(I.shape)
-    F = fftshift(fftn(I))
-    # Make a binary mask
-    _,M = circ_sample.stitch_samples(F,3,50):
-    F = np.stack([np.real(F),np.imag(F)],axis=0)
-    
-    # We want the mask channel number to equal the number of channels on F
-    
- 
-    return torch.Tensor(I).to(torch.float32), torch.Tensor(M).to(torch.float32)
+  Returns: None
+  """
+
+  # First listdir over the data folder to count number of folders in the directory (take out .csv)
+
+  image_list = os.listdir(in_path)
+  image_list = [s for s in image_list if not s.endswith('.csv')]
+
+  # Delete folder if already exists
+  if os.path.exists(out_path):
+    shutil.rmtree(out_path)
   
+  os.mkdir(out_path)
+
+  # Run tqdm forloop
+  for i in tqdm(range(len(image_list))):
+    shutil.copytree(os.path.join(in_path,image_list[i]),os.path.join(out_path,image_list[i]))
+  
+  return None
+
+
+# Define function for reading image
+def read_image(image_path = ''):
+    """
+    Wrapper function to read image and raw image
+    """
+    I = plt.imread(image_path)
+    # Rescale to 0-1
+    I = I/255
+
+    return I
+    
+# Dataset definition
+
+from torch.utils.data import Dataset, DataLoader, random_split
+from torchvision import transforms
+
+
+class dog_train_dataset(Dataset):
+
+  def __init__(self,path = 'data/data/train'):
+    self.path = path
+    self.transforms = transforms
+    self.file_list = [fn for fn in os.listdir(self.path) if fn.endswith('.jpg')]
+  
+  def __len__(self):
+    return len(self.file_list)
+
+  def __getitem__(self,idx):
+      image_path = os.path.join(self.path,self.file_list[idx])
+      I = np.mean(read_image(image_path),axis=-1,keepdims=False)
+      # Take FFT
+      F = fftshift(fftn(I))
+      # Masking
+      _,M = circ_sample.stitch_samples(F,5,30)
+      
+      # All to torch tensor
+      F = np.stack([np.real(F),np.imag(F)])
+      F = torch.Tensor(F).float()
+      M = torch.Tensor(M).float()
+      I = torch.Tensor(I).float()
+
+      return (I,F,M)
+
+
+
+
