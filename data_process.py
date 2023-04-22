@@ -170,6 +170,34 @@ class dog_train_dataset(Dataset):
 
       return (I,F,M)
 
+class dog_test_dataset(Dataset):
+
+  def __init__(self,path = 'data/test',rad=30,L=5):
+    self.path = path
+    self.transforms = transforms
+    self.file_list = [fn for fn in os.listdir(self.path) if fn.endswith('.jpg')]
+    self.rad = rad
+    self.L = L
+  def __len__(self):
+    return len(self.file_list)
+
+  def __getitem__(self,idx):
+      image_path = os.path.join(self.path,self.file_list[idx])
+      I = np.mean(read_image(image_path),axis=-1,keepdims=False)
+      # Take FFT
+      F = fftshift(fftn(I))
+      # Masking
+      _,M = circ_sample.stitch_samples(F,self.L,self.rad)
+      
+      # All to torch tensor
+      F = np.stack([np.real(F),np.imag(F)])
+      F = torch.Tensor(F).float()
+      M = torch.Tensor(M).float()
+      I = torch.Tensor(I).float()
+
+      return (I,F,M)
+
+
 
 
 
