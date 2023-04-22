@@ -145,11 +145,12 @@ from torchvision import transforms
 
 class dog_train_dataset(Dataset):
 
-  def __init__(self,path = 'data/data/train'):
+  def __init__(self,path = 'data/train',rad=30,L=5):
     self.path = path
     self.transforms = transforms
     self.file_list = [fn for fn in os.listdir(self.path) if fn.endswith('.jpg')]
-  
+    self.rad = rad
+    self.L = L
   def __len__(self):
     return len(self.file_list)
 
@@ -159,7 +160,7 @@ class dog_train_dataset(Dataset):
       # Take FFT
       F = fftshift(fftn(I))
       # Masking
-      _,M = circ_sample.stitch_samples(F,5,30)
+      _,M = circ_sample.stitch_samples(F,self.L,self.rad)
       
       # All to torch tensor
       F = np.stack([np.real(F),np.imag(F)])
