@@ -168,7 +168,7 @@ class dog_train_dataset(Dataset):
       M = torch.Tensor(M).float()
       I = torch.Tensor(I).float()
 
-      return (I,F,M)
+      return (I,F,M.repeat(F.shape[0],1,1))
 
 class dog_test_dataset(Dataset):
 
@@ -195,7 +195,7 @@ class dog_test_dataset(Dataset):
       M = torch.Tensor(M).float()
       I = torch.Tensor(I).float()
 
-      return (I,F,M)
+      return (I,F,M.repeat(F.shape[0],1,1))
 
 
 
