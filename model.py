@@ -51,28 +51,28 @@ class upsample_conv(nn.Module):
   def __init__(self,in_channels,out_channels):
     super(upsample_conv,self).__init__()
     self.upsample = torch.nn.Upsample(scale_factor=2)
-    self.cconv = partial_conv(in_channels,out_channels,1)
+    #self.cconv = partial_conv(in_channels,out_channels,1)
   
   def forward(self,x,m):
 
     # Upsample the x,m
     x = self.upsample(x)
     m = self.upsample(m)
-    y1,m1 = self.cconv(x,m)
+    #y1,m1 = self.cconv(x,m)
 
-    return y1,m1
+    return x,m
   
 class out_conv(nn.Module):
   def __init__(self,in_channels,num_classes):
     super(out_conv,self).__init__()
     self.in_channels = in_channels
     self.num_classes = num_classes
-    self.softmax = nn.Softmax(dim=1)
+    #self.softmax = nn.Softmax(dim=1)
     self.conv = partial_conv(self.in_channels,self.num_classes,kernel_size=1)
 
   def forward(self,x,m):
     y1,m1 = self.conv(x,m)
-    return self.softmax(y1)
+    return y1
 
 
 class encoder_block(nn.Module):
