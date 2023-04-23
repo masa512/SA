@@ -30,8 +30,8 @@ class s_loss(nn.Module):
   def __init__(self,lmb):
     super(s_loss,self).__init__()
     self.lmb = lmb
-    self.sob0 = torch.Tensor(np.array([[1,2,1],[0,0,0],[-1,-2,-1]])).float()
-    self.sob1 = torch.Tensor(np.array([[-1,0,1],[-2,0,2],[-1,0,1]])).float()
+    self.sob0 = torch.Tensor(np.array([[1,2,1],[0,0,0],[-1,-2,-1]])).float().unsqueeze(dim=0).unsqueeze(dim=0).to('cuda')
+    self.sob1 = torch.Tensor(np.array([[-1,0,1],[-2,0,2],[-1,0,1]])).float().unsqueeze(dim=0).unsqueeze(dim=0).to('cuda')
     self.mse_loss = nn.MSELoss()
   def forward(self,Fpred,M):
     # We will add contribution from both real and imag part 
@@ -48,6 +48,6 @@ class s_loss(nn.Module):
     Gxi = abs(nn.functional.conv2d(Fmask[:,1:2,:,:],self.sob1))
 
     # Part 3 : Evaluate MSE 
-    L = self.lmb * self.mse_loss(torch.log(Gyr+Gxr+Gyi+Gxi),torch.zeros_like(Gyr))
+    L = self.lmb * self.mse_loss((Gyr+Gxr+Gyi+Gxi),torch.zeros_like(Gyr))
 
     return L 
