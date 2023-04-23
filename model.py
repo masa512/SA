@@ -9,6 +9,7 @@ class partial_conv(nn.Module):
     self.out_channels = out_channels
     self.conv = nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=kernel_size,padding=kernel_size//2)
     self.kernel = 1/((self.kernel_size)**2*self.in_channels) * torch.ones(self.out_channels,self.in_channels,self.kernel_size,self.kernel_size,requires_grad=False)
+    self.kernel = self.kernel.to('cuda')
   def forward(self,x,m,eps=1e-10):
     x_masked = x * m
     y = self.conv(x_masked)
