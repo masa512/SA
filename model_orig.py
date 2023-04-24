@@ -34,3 +34,79 @@ class pconv(nn.Module):
     m = m_out
 
     return y,m
+
+class conv_module(nn.Module):
+  def __init__(self,in_channels,out_channels,kernel_size,stride,bn=True,act='relu'):
+    super(self,conv_module).__init__()
+    self.conv = pconv(in_channels,out_channels,kernel_size,stride)
+    if bn:
+      self.batch_norm = nn.BatchNorm2d(out_channels)
+
+    if act == 'relu':
+      self.act = nn.ReLU()
+    elif act == 'leaky':
+      self.act = nn.LeakyReLU()
+  
+  def forward(self,x,m):
+    # Apply convolution
+    h,m_out = self.conv(x,m)
+    if hasattr(self,'batch_norm'):
+      h = self.batch_norm(h)   
+    if hasattr(self,'act'):
+      h = self.act(h)
+    return h,m
+
+
+class pconv_net(nn.Module):
+  def __init__(self,in_features,out_features,base_channel):
+    super(self,pconv_net).__init__()
+    #Encoder blocks
+    self.encoder1 = conv_module(in_features,base_channel,3,2)
+    self.encoder2 = conv_module(base_channel,base_channel*2,3,2)
+    self.encoder3 = conv_module(base_channel*2,base_channel*4,3,2)
+    self.encoder4 = conv_module(base_channel*4,base_channel*8,3,2)
+
+    #Decoder blocks (the channel concat & forward conv module done at once)
+    self.decoder4 = conv_module(base_channel*8+base_channel*4,base_channel*4,3,1,act='leaky')
+    self.decoder3 = conv_module(base_channel*4+base_channel*2,base_channel*2,3,1,act='leaky')
+    self.decoder2 = conv_module(base_channel*2+base_channel,base_channel,3,1,act='leaky')
+    self.decoder1 = conv_module(base_channel+in_features,out_features,3,1,act=None)
+
+    # Upsample
+    self.usample = nn.Upsample(scale_factor=2,mode='nearest')
+  def forward(self,x,m):
+    # Define a dictionary of outputs (h,m)
+    out_dict = {}
+
+    # First, save the inputs
+    out_dict['e0'] = (x,m)
+
+    # Encoder pass
+    for i in range(1,5):
+      out_dict['e{:d}'.format(i)] = getattr(self,'encoder{:d}'.format(i))(out_dict['e{:d}'.format(i-1)])
+    
+    h,m_out = out_dict['e{:d}'.format(4)]
+    # Decoder pass
+    for i in range(4,0,-1):
+      # Upsample h and m
+      h = self.usample(h)
+      m_out = self.usample(m_out)
+
+      # Concatenate 
+      h_enc,m_enc = out_dict['e{:d}'.format(i-1)]
+      h = torch.concatenate([h,h_enc],dim=1)
+      m_out = torch.concatenate([m,m_enc],dim=1)
+
+      # Pass through decoder
+      h,m_out = getattr(self,'decoder{:d}'.format(i))(h,m_out)
+    
+    return h,m_out
+
+
+      
+
+
+
+
+    
+
