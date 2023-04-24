@@ -193,14 +193,15 @@ class simple_dataset(Dataset):
     I = torch.Tensor(I).view(1,I.shape[1],I.shape[0]).float()
     
     # Generate mask
-    M = torch.zeros_like(I).float()
+    M = torch.ones_like(I).float()
     m0 = M.shape[0]//2 - self.box_dim[0]//2
     m1 = M.shape[1]//2 - self.box_dim[1]//2
 
     M0 = M.shape[0]//2 + self.box_dim[0]//2
     M1 = M.shape[1]//2 + self.box_dim[1]//2
 
-    M[m0:M0,m1:M1] = 1.0
+    M[m0:M0,m1:M1] = 0.0
 
+    # Mask the input
     return I,M
 

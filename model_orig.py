@@ -18,20 +18,22 @@ class pconv(nn.Module):
   
   def forward(self,x,m):
     # Step 1 : Apply input convolution to the masked input
-    print('시작')
     h = self.conv(x*m)
     # Step 2 : Assign by reference bias separately (just len channel)
     bias = self.conv.bias.view(1,-1,1,1).expand(h.shape[0],-1,h.shape[2],h.shape[3])
     # Step 3 : Apply pooling on the mask and make non zero entries all 1
     with torch.no_grad():
-      m_out = self.mask_conv(m)
-    zero = m_out == 0
-    m_out = m_out.masked_fill_(zero,1.0)
+      m_sum = self.mask_conv(m)
+    non_zero = m_sum > 0
+    zero = m_sum == 0
+    m_out = m_sum.masked_fill_(non_zero,1.0)
 
     # Step 4 : Apply the final operation (W.T(x*m) - b(x*m))*1/(M)+b
-    y = (h-bias)/m_out + bias
+    y = (h-bias)/m_sum + bias
+    y = y.masked_fill_(zero,0.0)
 
-    return y,1.0-1.0*(zero)
+
+    return y,m_sum 
 
 class conv_module(nn.Module):
   def __init__(self,in_channels,out_channels,kernel_size,stride,bn=True,act='relu'):
