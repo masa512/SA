@@ -34,7 +34,7 @@ class perceptual_loss(nn.Module):
     if crit == 'L2':
       self.crit = nn.MSELoss()
     else:
-      self.crit = nn.L1Loss
+      self.crit = nn.L1Loss()
 
 
   def forward(self,Igt,Ipred,idx=[0],norm=False):
@@ -43,9 +43,9 @@ class perceptual_loss(nn.Module):
       Igt = (Igt - self.mean)/self.sigma
       Ipred = (Ipred - self.mean)/self.sigma
     
-    # Duplicate 3 channels
-    Igt = Igt.repeat(1,3,1,1)
-    Ipred = Ipred.repeat(1,3,1,1)
+    if Igt.shape[1] != 3:
+      Igt = Igt.repeat(1,3,1,1)
+      Ipred = Ipred.repeat(1,3,1,1)
 
 
     # Save losses separately

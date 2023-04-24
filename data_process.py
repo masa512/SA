@@ -7,6 +7,13 @@ import circ_sample
 from scipy.fft import ifftn,fftn,fftshift,ifftshift
 
 
+# Reconstruct fusion image using Igt and Ipred
+
+def fuse_image(Igt,Ipred,M):
+  # Mask is 1 for cut out
+  Ifuse = Ipred * M + Igt * (1.0-M)
+  return Ifuse
+
 # Transport the dataset to the local disk
 def transfer_data(in_path:str="", out_path:str="")->None:
   """}
@@ -86,7 +93,7 @@ class cell_dataset(Dataset):
 
     return len(self.folders)
   
-  import os
+import os
 import shutil
 from tqdm import tqdm
 import matplotlib.pyplot as plt
@@ -170,34 +177,30 @@ class dog_train_dataset(Dataset):
 
       return (I,F,M.repeat(F.shape[0],1,1))
 
-class dog_test_dataset(Dataset):
-
-  def __init__(self,path = 'data/test',rad=30,L=5):
-    self.path = path
-    self.transforms = transforms
+class simple_dataset(Dataset):
+  
+  def __init__(self,path = 'data', mode = 'train', box_dim = (50,50)):
+    self.path = os.path.join(path,mode)
     self.file_list = [fn for fn in os.listdir(self.path) if fn.endswith('.jpg')]
-    self.rad = rad
-    self.L = L
+    self.box_dim = box_dim
+  
   def __len__(self):
     return len(self.file_list)
 
   def __getitem__(self,idx):
-      image_path = os.path.join(self.path,self.file_list[idx])
-      I = np.mean(read_image(image_path),axis=-1,keepdims=False)
-      # Take FFT
-      F = fftshift(fftn(I))
-      # Masking
-      _,M = circ_sample.stitch_samples(F,self.L,self.rad)
-      
-      # All to torch tensor
-      F = np.stack([np.real(F),np.imag(F)])
-      F = torch.Tensor(F).float()
-      M = torch.Tensor(M).float()
-      I = torch.Tensor(I).float()
+    image_path = os.path.join(self.path,self.file_list[idx])
+    I = np.mean(read_image(image_path),axis=-1,keepdims=False)
+    I = torch.Tensor(I).view(1,I.shape[1],I.shape[0]).float()
+    
+    # Generate mask
+    M = torch.zeros_like(I).float()
+    m0 = M.shape[0]//2 - self.box_dim[0]//2
+    m1 = M.shape[1]//2 - self.box_dim[1]//2
 
-      return (I,F,M.repeat(F.shape[0],1,1))
+    M0 = M.shape[0]//2 + self.box_dim[0]//2
+    M1 = M.shape[1]//2 + self.box_dim[1]//2
 
+    M[m0:M0,m1:M1] = 1.0
 
-
-
+    return I,M
 
