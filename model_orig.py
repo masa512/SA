@@ -7,7 +7,7 @@ class pconv(nn.Module):
   # Here, Mask is assumed to be 1 where missing!!!
 
   def __init__(self,in_channels,out_channels,kernel_size,stride):
-    super(self,pconv).__init__()
+    super(pconv,self).__init__()
     self.conv = nn.Conv2d(in_channels,out_channels,kernel_size,stride,padding=1)
     self.mask_conv = nn.Conv2d(in_channels,out_channels,kernel_size,stride,padding=1,bias=False)
     nn.init.constant_(self.mask_conv.weight.data, val=1) # All ones
@@ -18,26 +18,24 @@ class pconv(nn.Module):
   
   def forward(self,x,m):
     # Step 1 : Apply input convolution to the masked input
-    h = self.conv(x,m)
-
+    print('시작')
+    h = self.conv(x*m)
     # Step 2 : Assign by reference bias separately (just len channel)
-    bias = self.conv.bias.view(1,-1,1,1).expand((h.shape[0],1,h.shape[2],h.shape[3]))
-
+    bias = self.conv.bias.view(1,-1,1,1).expand(h.shape[0],-1,h.shape[2],h.shape[3])
     # Step 3 : Apply pooling on the mask and make non zero entries all 1
     with torch.no_grad():
       m_out = self.mask_conv(m)
     zero = m_out == 0
-    m_out.masked_fill_(zero,1.0)
+    m_out = m_out.masked_fill_(zero,1.0)
 
     # Step 4 : Apply the final operation (W.T(x*m) - b(x*m))*1/(M)+b
     y = (h-bias)/m_out + bias
-    m = m_out
 
-    return y,m
+    return y,1.0-1.0*(zero)
 
 class conv_module(nn.Module):
   def __init__(self,in_channels,out_channels,kernel_size,stride,bn=True,act='relu'):
-    super(self,conv_module).__init__()
+    super(conv_module,self).__init__()
     self.conv = pconv(in_channels,out_channels,kernel_size,stride)
     if bn:
       self.batch_norm = nn.BatchNorm2d(out_channels)
@@ -54,12 +52,12 @@ class conv_module(nn.Module):
       h = self.batch_norm(h)   
     if hasattr(self,'act'):
       h = self.act(h)
-    return h,m
+    return h,m_out
 
 
 class pconv_net(nn.Module):
   def __init__(self,in_features,out_features,base_channel):
-    super(self,pconv_net).__init__()
+    super(pconv_net,self).__init__()
     #Encoder blocks
     self.encoder1 = conv_module(in_features,base_channel,3,2)
     self.encoder2 = conv_module(base_channel,base_channel*2,3,2)
@@ -83,7 +81,7 @@ class pconv_net(nn.Module):
 
     # Encoder pass
     for i in range(1,5):
-      out_dict['e{:d}'.format(i)] = getattr(self,'encoder{:d}'.format(i))(out_dict['e{:d}'.format(i-1)])
+      out_dict['e{:d}'.format(i)] = getattr(self,'encoder{:d}'.format(i))(*(out_dict['e{:d}'.format(i-1)]))
     
     h,m_out = out_dict['e{:d}'.format(4)]
     # Decoder pass
@@ -92,15 +90,17 @@ class pconv_net(nn.Module):
       h = self.usample(h)
       m_out = self.usample(m_out)
 
+      
+
       # Concatenate 
       h_enc,m_enc = out_dict['e{:d}'.format(i-1)]
       h = torch.concatenate([h,h_enc],dim=1)
-      m_out = torch.concatenate([m,m_enc],dim=1)
+      m_out = torch.concatenate([m_out,m_enc],dim=1)
 
       # Pass through decoder
       h,m_out = getattr(self,'decoder{:d}'.format(i))(h,m_out)
     
-    return h,m_out
+    return h
 
 
       
