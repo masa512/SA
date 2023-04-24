@@ -17,7 +17,7 @@ Block 4 : Layers 16-22
 
 class perceptual_loss(nn.Module):
   
-  def __init__(self):
+  def __init__(self,crit = 'L1'):
     
     self.vgg_conv = vgg16(pretrained=True).features
     
@@ -29,10 +29,21 @@ class perceptual_loss(nn.Module):
     self.register_buffer(name='mean', tensor = torch.Tensor([0.485, 0.456, 0.406]).view(1,-1,1,1))
     self.register_buffer(name='sigma', tensor = torch.Tensor([0.229, 0.224, 0.225]).view(1,-1,1,1))
 
-  def forward(self,Igt,Ipred,blocks = [0],norm=False):
+    # error fnx
+    if crit == 'L2':
+      self.crit = nn.MSELoss()
+    else:
+      self.crit = nn.L1Loss
+
+
+  def forward(self,Igt,Ipred,blocks=[0],norm=False):
     
     if norm:
       Igt = (Igt - self.mean)/self.sigma
       Ipred = (Ipred - self.mean)/self.sigma
+
+    # Save losses separately
+    losses = []
+
     
     
