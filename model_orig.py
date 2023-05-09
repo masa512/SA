@@ -1,3 +1,6 @@
+# The model was significantly motivated by the work from the following repository
+# https://github.com/tanimutomo/partialconv/blob/master/src/model.py
+
 import torch
 import torch.nn as nn
 
